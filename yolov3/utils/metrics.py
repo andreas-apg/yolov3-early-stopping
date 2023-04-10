@@ -157,22 +157,36 @@ class ConfusionMatrix:
     def matrix(self):
         return self.matrix
 
-    def plot(self, save_dir='', names=()):
+#     def plot(self, save_dir='', names=()):
+# A: added this normalization flag
+    def plot(self, normalize = True, save_dir='', names=()):
         try:
             import seaborn as sn
-
-            array = self.matrix / (self.matrix.sum(0).reshape(1, self.nc + 1) + 1E-6)  # normalize
+            # A: begin of my changes. I added all those normalize conditionals. In normalize true are the originals
+            if normalize:
+                array = self.matrix / (self.matrix.sum(0).reshape(1, self.nc + 1) + 1E-6)  # normalize
+            else:
+                array = self.matrix
+#             array = self.matrix / (self.matrix.sum(0).reshape(1, self.nc + 1) + 1E-6)  # normalize
             array[array < 0.005] = np.nan  # don't annotate (would appear as 0.00)
 
             fig = plt.figure(figsize=(12, 9), tight_layout=True)
             sn.set(font_scale=1.0 if self.nc < 50 else 0.8)  # for label size
             labels = (0 < len(names) < 99) and len(names) == self.nc  # apply names to ticklabels
-            sn.heatmap(array, annot=self.nc < 30, annot_kws={"size": 8}, cmap='Blues', fmt='.2f', square=True,
-                       xticklabels=names + ['background FP'] if labels else "auto",
-                       yticklabels=names + ['background FN'] if labels else "auto").set_facecolor((1, 1, 1))
+            if normalize:
+                sn.heatmap(array, annot=self.nc < 30, annot_kws={"size": 8}, cmap='Blues', fmt='.2f', square=True,
+                           xticklabels=names + ['background FP'] if labels else "auto",
+                           yticklabels=names + ['background FN'] if labels else "auto").set_facecolor((1, 1, 1))
+            else:
+                sn.heatmap(array, annot=self.nc < 30, annot_kws={"size": 8}, vmax = 200000, cmap='Blues', fmt='g', square=True,
+                           xticklabels=names + ['background FP'] if labels else "auto",
+                           yticklabels=names + ['background FN'] if labels else "auto").set_facecolor((1, 1, 1))
             fig.axes[0].set_xlabel('True')
             fig.axes[0].set_ylabel('Predicted')
-            fig.savefig(Path(save_dir) / 'confusion_matrix.png', dpi=250)
+            if normalize:
+                fig.savefig(Path(save_dir) / 'confusion_matrix_normalized.png', dpi=250)
+            else:
+                fig.savefig(Path(save_dir) / 'confusion_matrix_true.png', dpi=250)
         except Exception as e:
             pass
 
